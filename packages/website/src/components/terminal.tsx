@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Copy, Check, ChevronRight } from "lucide-react";
 
 const COPIED_RESET_DELAY_MS = 2000;
@@ -278,7 +278,6 @@ const INITIAL_STATE: AnimationState = {
 
 const Terminal = () => {
   const [state, setState] = useState<AnimationState>(INITIAL_STATE);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -333,14 +332,11 @@ const Terminal = () => {
   }, []);
 
   useEffect(() => {
-    containerRef.current?.scrollTo({ top: containerRef.current.scrollHeight });
+    window.scrollTo({ top: document.body.scrollHeight });
   }, [state]);
 
   return (
-    <div
-      ref={containerRef}
-      className="h-screen w-full overflow-y-auto bg-[#0a0a0a] p-6 pb-32 font-mono text-base leading-relaxed text-neutral-300 sm:p-8 sm:pb-40 sm:text-lg"
-    >
+    <div className="min-h-screen w-full bg-[#0a0a0a] p-6 pb-32 font-mono text-base leading-relaxed text-neutral-300 sm:p-8 sm:pb-40 sm:text-lg">
       <div>
         <span className="text-neutral-500">$ </span>
         <span>{state.typedCommand}</span>
