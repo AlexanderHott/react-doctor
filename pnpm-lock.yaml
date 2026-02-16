@@ -68,7 +68,7 @@ importers:
         specifier: ^0.20.3
         version: 0.20.3(oxc-resolver@11.17.1)(typescript@5.9.3)
 
-  website:
+  packages/website:
     dependencies:
       next:
         specifier: 16.1.6
