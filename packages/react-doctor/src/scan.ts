@@ -159,8 +159,25 @@ const printScoreGauge = (score: number, label: string): void => {
   logger.break();
 };
 
-const printBranding = (): void => {
+const getDocterFace = (score: number): string[] => {
+  if (score >= SCORE_GOOD_THRESHOLD) {
+    return ["  ┌─────┐", "  │ ◠ ◠ │", "  │  ▽  │", "  └─────┘"];
+  }
+  if (score >= SCORE_OK_THRESHOLD) {
+    return ["  ┌─────┐", "  │ • • │", "  │  ─  │", "  └─────┘"];
+  }
+  return ["  ┌─────┐", "  │ x x │", "  │  ▽  │", "  └─────┘"];
+};
+
+const printBranding = (score?: number): void => {
   logger.break();
+  if (score !== undefined) {
+    const face = getDocterFace(score);
+    for (const line of face) {
+      logger.log(colorizeByScore(line, score));
+    }
+    logger.break();
+  }
   logger.dim("  React Doctor (www.react.doctor)");
 };
 
@@ -198,7 +215,7 @@ const printSummary = (
 
   logger.log(`  ${parts.join("  ")}`);
 
-  printBranding();
+  printBranding(scoreResult?.score);
 
   try {
     const diagnosticsDirectory = writeDiagnosticsDirectory(diagnostics);
@@ -298,7 +315,7 @@ export const scan = async (directory: string, options: ScanOptions): Promise<voi
     logger.break();
     if (scoreResult) {
       printScoreGauge(scoreResult.score, scoreResult.label);
-      printBranding();
+      printBranding(scoreResult.score);
     } else {
       logger.dim(`  ${OFFLINE_MESSAGE}`);
     }
