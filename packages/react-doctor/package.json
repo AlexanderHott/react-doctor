@@ -1,6 +1,6 @@
 {
   "name": "react-doctor",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "bin": {
     "react-doctor": "./dist/cli.js"
   },
@@ -12,6 +12,10 @@
     ".": {
       "types": "./dist/cli.d.ts",
       "default": "./dist/cli.js"
+    },
+    "./oxlint-plugin": {
+      "types": "./dist/react-doctor-plugin.d.ts",
+      "default": "./dist/react-doctor-plugin.js"
     }
   },
   "scripts": {

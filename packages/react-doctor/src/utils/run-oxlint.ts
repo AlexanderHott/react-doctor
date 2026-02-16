@@ -74,6 +74,7 @@ const RULE_CATEGORY_MAP: Record<string, string> = {
   "react-doctor/nextjs-no-css-link": "Next.js",
   "react-doctor/nextjs-no-polyfill-script": "Next.js",
   "react-doctor/nextjs-no-head-import": "Next.js",
+  "react-doctor/nextjs-no-side-effect-in-get-handler": "Security",
 
   "react-doctor/server-auth-actions": "Server",
   "react-doctor/server-after-nonblocking": "Server",
@@ -189,6 +190,8 @@ const RULE_HELP_MAP: Record<string, string> = {
     "Next.js includes polyfills for fetch, Promise, Object.assign, Array.from, and 50+ others automatically",
   "nextjs-no-head-import":
     "Use the Metadata API instead: `export const metadata = { title: '...' }` or `export async function generateMetadata()`",
+  "nextjs-no-side-effect-in-get-handler":
+    "Move the side effect to a POST handler and use a <form> or fetch with method POST — GET requests can be triggered by prefetching and are vulnerable to CSRF",
 
   "server-auth-actions":
     "Add `const session = await auth()` at the top and throw/redirect if unauthorized before any data access",

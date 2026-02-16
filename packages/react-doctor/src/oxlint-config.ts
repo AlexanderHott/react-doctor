@@ -19,6 +19,7 @@ const NEXTJS_RULES: Record<string, string> = {
   "react-doctor/nextjs-no-css-link": "warn",
   "react-doctor/nextjs-no-polyfill-script": "warn",
   "react-doctor/nextjs-no-head-import": "error",
+  "react-doctor/nextjs-no-side-effect-in-get-handler": "error",
 };
 
 const REACT_COMPILER_RULES: Record<string, string> = {

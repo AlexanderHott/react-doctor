@@ -2,15 +2,18 @@ import {
   APP_DIRECTORY_PATTERN,
   EFFECT_HOOK_NAMES,
   GOOGLE_FONTS_PATTERN,
+  MUTATING_ROUTE_SEGMENTS,
   NEXTJS_NAVIGATION_FUNCTIONS,
   PAGE_FILE_PATTERN,
   PAGE_OR_LAYOUT_FILE_PATTERN,
   PAGES_DIRECTORY_PATTERN,
   POLYFILL_SCRIPT_PATTERN,
+  ROUTE_HANDLER_FILE_PATTERN,
 } from "../constants.js";
 import {
   containsFetchCall,
   findJsxAttribute,
+  findSideEffect,
   getEffectCallback,
   hasDirective,
   hasJsxAttribute,
@@ -362,6 +365,69 @@ export const nextjsNoHeadImport: Rule = {
         node,
         message: "next/head is not supported in the App Router — use the Metadata API instead",
       });
+    },
+  }),
+};
+
+const extractMutatingRouteSegment = (filename: string): string | null => {
+  const segments = filename.split("/");
+  for (const segment of segments) {
+    const cleaned = segment.replace(/^\[.*\]$/, "");
+    if (MUTATING_ROUTE_SEGMENTS.has(cleaned)) return cleaned;
+  }
+  return null;
+};
+
+const getExportedGetHandlerBody = (node: EsTreeNode): EsTreeNode | null => {
+  if (node.type !== "ExportNamedDeclaration") return null;
+  const declaration = node.declaration;
+  if (!declaration) return null;
+
+  if (declaration.type === "FunctionDeclaration" && declaration.id?.name === "GET") {
+    return declaration.body;
+  }
+
+  if (declaration.type === "VariableDeclaration") {
+    const declarator = declaration.declarations?.[0];
+    if (
+      declarator?.id?.type === "Identifier" &&
+      declarator.id.name === "GET" &&
+      declarator.init &&
+      (declarator.init.type === "ArrowFunctionExpression" ||
+        declarator.init.type === "FunctionExpression")
+    ) {
+      return declarator.init.body;
+    }
+  }
+
+  return null;
+};
+
+export const nextjsNoSideEffectInGetHandler: Rule = {
+  create: (context: RuleContext) => ({
+    ExportNamedDeclaration(node: EsTreeNode) {
+      const filename = context.getFilename?.() ?? "";
+      if (!ROUTE_HANDLER_FILE_PATTERN.test(filename)) return;
+
+      const handlerBody = getExportedGetHandlerBody(node);
+      if (!handlerBody) return;
+
+      const mutatingSegment = extractMutatingRouteSegment(filename);
+      if (mutatingSegment) {
+        context.report({
+          node,
+          message: `GET handler on "/${mutatingSegment}" route — use POST to prevent CSRF and unintended prefetch triggers`,
+        });
+        return;
+      }
+
+      const sideEffect = findSideEffect(handlerBody);
+      if (sideEffect) {
+        context.report({
+          node,
+          message: `GET handler has side effects (${sideEffect}) — use POST to prevent CSRF and unintended prefetch triggers`,
+        });
+      }
     },
   }),
 };

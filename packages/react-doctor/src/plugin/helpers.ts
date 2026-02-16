@@ -2,6 +2,8 @@ import {
   FETCH_CALLEE_NAMES,
   FETCH_MEMBER_OBJECTS,
   LOOP_TYPES,
+  MUTATING_HTTP_METHODS,
+  MUTATION_METHOD_NAMES,
   SETTER_PATTERN,
   UPPERCASE_PATTERN,
 } from "./constants.js";
@@ -180,6 +182,62 @@ export const createLoopAwareVisitors = (
   }
 
   return visitors;
+};
+
+const isCookiesOrHeadersCall = (node: EsTreeNode, methodName: string): boolean => {
+  if (node.type !== "CallExpression" || node.callee?.type !== "MemberExpression") return false;
+  const { object, property } = node.callee;
+  if (property?.type !== "Identifier" || !MUTATION_METHOD_NAMES.has(property.name)) return false;
+  if (object?.type !== "CallExpression" || object.callee?.type !== "Identifier") return false;
+  return object.callee.name === methodName;
+};
+
+const isMutatingDbCall = (node: EsTreeNode): boolean => {
+  if (node.type !== "CallExpression" || node.callee?.type !== "MemberExpression") return false;
+  const { property } = node.callee;
+  return property?.type === "Identifier" && MUTATION_METHOD_NAMES.has(property.name);
+};
+
+const isMutatingFetchCall = (node: EsTreeNode): boolean => {
+  if (node.type !== "CallExpression") return false;
+  if (node.callee?.type !== "Identifier" || node.callee.name !== "fetch") return false;
+  const optionsArgument = node.arguments?.[1];
+  if (!optionsArgument || optionsArgument.type !== "ObjectExpression") return false;
+  return optionsArgument.properties?.some(
+    (property: EsTreeNode) =>
+      property.type === "Property" &&
+      property.key?.type === "Identifier" &&
+      property.key.name === "method" &&
+      property.value?.type === "Literal" &&
+      typeof property.value.value === "string" &&
+      MUTATING_HTTP_METHODS.has(property.value.value.toUpperCase()),
+  );
+};
+
+export const findSideEffect = (node: EsTreeNode): string | null => {
+  let sideEffectDescription: string | null = null;
+  walkAst(node, (child: EsTreeNode) => {
+    if (sideEffectDescription) return;
+    if (isCookiesOrHeadersCall(child, "cookies")) {
+      const methodName = child.callee.property.name;
+      sideEffectDescription = `cookies().${methodName}()`;
+    } else if (isCookiesOrHeadersCall(child, "headers")) {
+      const methodName = child.callee.property.name;
+      sideEffectDescription = `headers().${methodName}()`;
+    } else if (isMutatingFetchCall(child)) {
+      const methodProperty = child.arguments[1].properties.find(
+        (property: EsTreeNode) =>
+          property.key?.type === "Identifier" && property.key.name === "method",
+      );
+      sideEffectDescription = `fetch() with method ${methodProperty.value.value}`;
+    } else if (isMutatingDbCall(child)) {
+      const methodName = child.callee.property.name;
+      const objectName =
+        child.callee.object?.type === "Identifier" ? child.callee.object.name : null;
+      sideEffectDescription = objectName ? `${objectName}.${methodName}()` : `.${methodName}()`;
+    }
+  });
+  return sideEffectDescription;
 };
 
 export const extractDestructuredPropNames = (params: EsTreeNode[]): Set<string> => {

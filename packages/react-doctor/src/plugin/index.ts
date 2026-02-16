@@ -45,6 +45,7 @@ import {
   nextjsNoNativeScript,
   nextjsNoPolyfillScript,
   nextjsNoRedirectInTryCatch,
+  nextjsNoSideEffectInGetHandler,
   nextjsNoUseSearchParamsWithoutSuspense,
 } from "./rules/nextjs.js";
 import {
@@ -135,6 +136,7 @@ const plugin: RulePlugin = {
     "nextjs-no-css-link": nextjsNoCssLink,
     "nextjs-no-polyfill-script": nextjsNoPolyfillScript,
     "nextjs-no-head-import": nextjsNoHeadImport,
+    "nextjs-no-side-effect-in-get-handler": nextjsNoSideEffectInGetHandler,
 
     "server-auth-actions": serverAuthActions,
     "server-after-nonblocking": serverAfterNonblocking,

@@ -347,6 +347,11 @@ describe("runOxlint", () => {
         ruleSource: "rules/nextjs.ts",
         severity: "error",
       },
+      "nextjs-no-side-effect-in-get-handler": {
+        fixture: "app/logout/route.tsx",
+        ruleSource: "rules/nextjs.ts",
+        severity: "error",
+      },
       "server-auth-actions": {
         fixture: "app/actions.tsx",
         ruleSource: "rules/server.ts",

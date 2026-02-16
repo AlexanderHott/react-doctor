@@ -135,6 +135,36 @@ export const POLYFILL_SCRIPT_PATTERN = /polyfill\.io|polyfill\.min\.js|cdn\.poly
 
 export const APP_DIRECTORY_PATTERN = /\/app\//;
 
+export const ROUTE_HANDLER_FILE_PATTERN = /\/route\.(tsx?|jsx?)$/;
+
+export const MUTATION_METHOD_NAMES = new Set([
+  "create",
+  "insert",
+  "insertInto",
+  "update",
+  "upsert",
+  "delete",
+  "remove",
+  "destroy",
+  "set",
+  "append",
+]);
+
+export const MUTATING_HTTP_METHODS = new Set(["POST", "PUT", "DELETE", "PATCH"]);
+
+export const MUTATING_ROUTE_SEGMENTS = new Set([
+  "logout",
+  "log-out",
+  "signout",
+  "sign-out",
+  "unsubscribe",
+  "delete",
+  "remove",
+  "revoke",
+  "cancel",
+  "deactivate",
+]);
+
 export const EFFECT_HOOK_NAMES = new Set(["useEffect", "useLayoutEffect"]);
 export const HOOKS_WITH_DEPS = new Set(["useEffect", "useLayoutEffect", "useMemo", "useCallback"]);
 export const CHAINABLE_ITERATION_METHODS = new Set(["map", "filter", "forEach", "flatMap"]);
