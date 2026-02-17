@@ -54,19 +54,6 @@ const program = new Command()
         scoreOnly: isScoreOnly,
       };
 
-<<<<<<< Updated upstream
-      const shouldSkipPrompts =
-        flags.yes ||
-        Boolean(process.env.CI) ||
-        Boolean(process.env.CLAUDECODE) ||
-        Boolean(process.env.CURSOR_TRACE_ID) ||
-        Boolean(process.env.CURSOR_AGENT) ||
-        Boolean(process.env.CODEX_CI) ||
-        Boolean(process.env.OPENCODE) ||
-        Boolean(process.env.AMP_HOME) ||
-        Boolean(process.env.AMI) ||
-        !process.stdin.isTTY;
-=======
       const isAutomatedEnvironment = [
         process.env.CI,
         process.env.CLAUDECODE,
@@ -78,7 +65,6 @@ const program = new Command()
         process.env.AMI,
       ].some(Boolean);
       const shouldSkipPrompts = flags.yes || isAutomatedEnvironment || !process.stdin.isTTY;
->>>>>>> Stashed changes
       const projectDirectories = await selectProjects(
         resolvedDirectory,
         flags.project,
