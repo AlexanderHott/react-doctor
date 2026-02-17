@@ -66,16 +66,16 @@ import { diagnose } from "react-doctor/api";
 
 const result = await diagnose("./path/to/your/react-project");
 
-console.log(result.score);       // { score: 82, label: "Good" } or null
+console.log(result.score); // { score: 82, label: "Good" } or null
 console.log(result.diagnostics); // Array of Diagnostic objects
-console.log(result.project);     // Detected framework, React version, etc.
+console.log(result.project); // Detected framework, React version, etc.
 ```
 
 The `diagnose` function accepts an optional second argument:
 
 ```js
 const result = await diagnose(".", {
-  lint: true,     // run lint checks (default: true)
+  lint: true, // run lint checks (default: true)
   deadCode: true, // run dead code detection (default: true)
 });
 ```
