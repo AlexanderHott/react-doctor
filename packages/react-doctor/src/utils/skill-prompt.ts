@@ -32,12 +32,13 @@ const writeConfig = (config: UserConfig): void => {
   } catch {}
 };
 
-const installSkill = (): boolean => {
+const installSkill = (): void => {
   try {
     execSync(`npx -y skills add ${SKILL_REPO}`, { stdio: "inherit" });
-    return true;
   } catch {
-    return false;
+    logger.break();
+    logger.dim("Skill install failed. You can install manually:");
+    logger.dim(`  npx skills add ${SKILL_REPO}`);
   }
 };
 
@@ -63,15 +64,7 @@ export const maybePromptSkillInstall = async (shouldSkipPrompts: boolean): Promi
 
   if (shouldInstall) {
     logger.break();
-    const didInstall = installSkill();
-    if (didInstall) {
-      logger.break();
-      logger.success("Skill installed!");
-    } else {
-      logger.break();
-      logger.dim("Skill install failed. You can install manually:");
-      logger.dim(`  npx skills add ${SKILL_REPO}`);
-    }
+    installSkill();
   }
 
   writeConfig({ ...config, skillPromptDismissed: true });
