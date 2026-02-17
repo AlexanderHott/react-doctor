@@ -121,7 +121,7 @@ ${highlighter.dim("Learn more:")}
 
 const AMI_INSTALL_URL = "https://ami.dev/install.sh";
 const FIX_PROMPT =
-  "Fix all issues reported in the react-doctor diagnostics below, one by one. After applying fixes, run `react-dcotor` again to verify the results improved.";
+  "Run `npx -y react-doctor@latest .` to diagnose issues, then fix all reported issues one by one. After applying fixes, run it again to verify the results improved.";
 const REACT_DOCTOR_OUTPUT_LABEL = "react-doctor output";
 const SCAN_SUMMARY_SEPARATOR = "─".repeat(SEPARATOR_LENGTH_CHARS);
 
