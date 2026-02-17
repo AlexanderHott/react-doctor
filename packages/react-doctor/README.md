@@ -1,8 +1,4 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./assets/react-doctor-readme-logo-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="./assets/react-doctor-readme-logo-light.svg">
-  <img alt="React Doctor" src="./assets/react-doctor-readme-logo-light.svg" width="180" height="40">
-</picture>
+# <img src="https://github.com/millionco/react-doctor/blob/main/.github/public/logo.svg?raw=true" width="60" align="center" /> React Doctor
 
 [![version](https://img.shields.io/npm/v/react-doctor?style=flat&colorA=000000&colorB=000000)](https://npmjs.com/package/react-doctor)
 [![downloads](https://img.shields.io/npm/dt/react-doctor.svg?style=flat&colorA=000000&colorB=000000)](https://npmjs.com/package/react-doctor)
