@@ -1,5 +1,11 @@
 # react-doctor
 
+## 0.0.10
+
+### Patch Changes
+
+- almost ready
+
 ## 0.0.9
 
 ### Patch Changes
