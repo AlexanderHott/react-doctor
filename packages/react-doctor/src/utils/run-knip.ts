@@ -57,15 +57,18 @@ const silenced = async <T>(fn: () => Promise<T>): Promise<T> => {
   const originalLog = console.log;
   const originalInfo = console.info;
   const originalWarn = console.warn;
+  const originalError = console.error;
   console.log = () => {};
   console.info = () => {};
   console.warn = () => {};
+  console.error = () => {};
   try {
     return await fn();
   } finally {
     console.log = originalLog;
     console.info = originalInfo;
     console.warn = originalWarn;
+    console.error = originalError;
   }
 };
 
@@ -89,6 +92,15 @@ const findMonorepoRoot = (directory: string): string | null => {
   return null;
 };
 
+const CONFIG_LOADING_ERROR_PATTERN = /Error loading .*\/([a-z-]+)\.config\./;
+
+const extractFailedPluginName = (error: unknown): string | null => {
+  const match = String(error).match(CONFIG_LOADING_ERROR_PATTERN);
+  return match?.[1] ?? null;
+};
+
+const MAX_KNIP_RETRIES = 5;
+
 const runKnipWithOptions = async (
   knipCwd: string,
   workspaceName?: string,
@@ -100,7 +112,22 @@ const runKnipWithOptions = async (
       ...(workspaceName ? { workspace: workspaceName } : {}),
     }),
   );
-  return (await silenced(() => main(options))) as KnipResults;
+
+  const parsedConfig = options.parsedConfig as Record<string, unknown>;
+
+  for (let attempt = 0; attempt <= MAX_KNIP_RETRIES; attempt++) {
+    try {
+      return (await silenced(() => main(options))) as KnipResults;
+    } catch (error) {
+      const failedPlugin = extractFailedPluginName(error);
+      if (!failedPlugin || attempt === MAX_KNIP_RETRIES) {
+        throw error;
+      }
+      parsedConfig[failedPlugin] = false;
+    }
+  }
+
+  throw new Error("Unreachable");
 };
 
 const hasNodeModules = (directory: string): boolean => {

@@ -165,32 +165,38 @@ const resolveWorkspaceDirectories = (rootDirectory: string, pattern: string): st
     );
 };
 
-const findDependencyInfoFromAncestors = (startDirectory: string): DependencyInfo => {
+const isMonorepoRoot = (directory: string): boolean => {
+  if (fs.existsSync(path.join(directory, "pnpm-workspace.yaml"))) return true;
+  const packageJsonPath = path.join(directory, "package.json");
+  if (!fs.existsSync(packageJsonPath)) return false;
+  const packageJson = readPackageJson(packageJsonPath);
+  return Array.isArray(packageJson.workspaces) || Boolean(packageJson.workspaces?.packages);
+};
+
+const findMonorepoRoot = (startDirectory: string): string | null => {
   let currentDirectory = path.dirname(startDirectory);
-  const result: DependencyInfo = { reactVersion: null, framework: "unknown" };
 
   while (currentDirectory !== path.dirname(currentDirectory)) {
-    const packageJsonPath = path.join(currentDirectory, "package.json");
-    if (fs.existsSync(packageJsonPath)) {
-      const packageJson = readPackageJson(packageJsonPath);
-      const info = extractDependencyInfo(packageJson);
-
-      if (!result.reactVersion && info.reactVersion) {
-        result.reactVersion = info.reactVersion;
-      }
-      if (result.framework === "unknown" && info.framework !== "unknown") {
-        result.framework = info.framework;
-      }
-
-      if (result.reactVersion && result.framework !== "unknown") {
-        return result;
-      }
-    }
-
+    if (isMonorepoRoot(currentDirectory)) return currentDirectory;
     currentDirectory = path.dirname(currentDirectory);
   }
 
-  return result;
+  return null;
+};
+
+const findDependencyInfoFromMonorepoRoot = (directory: string): DependencyInfo => {
+  const monorepoRoot = findMonorepoRoot(directory);
+  if (!monorepoRoot) return { reactVersion: null, framework: "unknown" };
+
+  const rootPackageJson = readPackageJson(path.join(monorepoRoot, "package.json"));
+  const rootInfo = extractDependencyInfo(rootPackageJson);
+  const workspaceInfo = findReactInWorkspaces(monorepoRoot, rootPackageJson);
+
+  return {
+    reactVersion: rootInfo.reactVersion ?? workspaceInfo.reactVersion,
+    framework:
+      rootInfo.framework !== "unknown" ? rootInfo.framework : workspaceInfo.framework,
+  };
 };
 
 const findReactInWorkspaces = (rootDirectory: string, packageJson: PackageJson): DependencyInfo => {
@@ -334,13 +340,13 @@ export const discoverProject = (directory: string): ProjectInfo => {
     }
   }
 
-  if (!reactVersion || framework === "unknown") {
-    const ancestorInfo = findDependencyInfoFromAncestors(directory);
+  if ((!reactVersion || framework === "unknown") && !isMonorepoRoot(directory)) {
+    const monorepoInfo = findDependencyInfoFromMonorepoRoot(directory);
     if (!reactVersion) {
-      reactVersion = ancestorInfo.reactVersion;
+      reactVersion = monorepoInfo.reactVersion;
     }
     if (framework === "unknown") {
-      framework = ancestorInfo.framework;
+      framework = monorepoInfo.framework;
     }
   }
 
