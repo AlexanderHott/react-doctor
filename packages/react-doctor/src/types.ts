@@ -86,6 +86,7 @@ export interface ScoreResult {
 export interface ScanResult {
   diagnostics: Diagnostic[];
   scoreResult: ScoreResult | null;
+  skippedChecks: string[];
 }
 
 export interface EstimatedScoreResult {

@@ -372,6 +372,9 @@ export const scan = async (
     ? includePaths.filter((filePath) => JSX_FILE_PATTERN.test(filePath))
     : undefined;
 
+  let didLintFail = false;
+  let didDeadCodeFail = false;
+
   const lintPromise = options.lint
     ? (async () => {
         const lintSpinner = options.scoreOnly ? null : spinner("Running lint checks...").start();
@@ -386,6 +389,7 @@ export const scan = async (
           lintSpinner?.succeed("Running lint checks.");
           return lintDiagnostics;
         } catch (error) {
+          didLintFail = true;
           lintSpinner?.fail("Lint checks failed (non-fatal, skipping).");
           if (error instanceof Error) {
             logger.error(error.message);
@@ -411,6 +415,7 @@ export const scan = async (
             deadCodeSpinner?.succeed("Detecting dead code.");
             return knipDiagnostics;
           } catch (error) {
+            didDeadCodeFail = true;
             deadCodeSpinner?.fail("Dead code detection failed (non-fatal, skipping).");
             logger.error(String(error));
             return [];
@@ -430,6 +435,11 @@ export const scan = async (
 
   const elapsedMilliseconds = performance.now() - startTime;
 
+  const skippedChecks: string[] = [];
+  if (didLintFail) skippedChecks.push("lint");
+  if (didDeadCodeFail) skippedChecks.push("dead code");
+  const hasSkippedChecks = skippedChecks.length > 0;
+
   const scoreResult = options.offline ? null : await calculateScore(diagnostics);
   const noScoreMessage = options.offline ? OFFLINE_FLAG_MESSAGE : OFFLINE_MESSAGE;
 
@@ -439,19 +449,29 @@ export const scan = async (
     } else {
       logger.dim(noScoreMessage);
     }
-    return { diagnostics, scoreResult };
+    return { diagnostics, scoreResult, skippedChecks };
   }
 
   if (diagnostics.length === 0) {
-    logger.success("No issues found!");
+    if (hasSkippedChecks) {
+      const skippedLabel = skippedChecks.join(" and ");
+      logger.warn(
+        `No issues detected, but ${skippedLabel} checks failed — results are incomplete.`,
+      );
+    } else {
+      logger.success("No issues found!");
+    }
     logger.break();
-    if (scoreResult) {
+    if (hasSkippedChecks) {
+      printBranding();
+      logger.dim("  Score not shown — some checks could not complete.");
+    } else if (scoreResult) {
       printBranding(scoreResult.score);
       printScoreGauge(scoreResult.score, scoreResult.label);
     } else {
       logger.dim(`  ${noScoreMessage}`);
     }
-    return { diagnostics, scoreResult };
+    return { diagnostics, scoreResult, skippedChecks };
   }
 
   printDiagnostics(diagnostics, options.verbose);
@@ -467,5 +487,11 @@ export const scan = async (
     noScoreMessage,
   );
 
-  return { diagnostics, scoreResult };
+  if (hasSkippedChecks) {
+    const skippedLabel = skippedChecks.join(" and ");
+    logger.break();
+    logger.warn(`  Note: ${skippedLabel} checks failed — score may be incomplete.`);
+  }
+
+  return { diagnostics, scoreResult, skippedChecks };
 };

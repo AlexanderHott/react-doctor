@@ -4,7 +4,11 @@ import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { ERROR_PREVIEW_LENGTH_CHARS, JSX_FILE_PATTERN } from "../constants.js";
+import {
+  ERROR_PREVIEW_LENGTH_CHARS,
+  JSX_FILE_PATTERN,
+  SPAWN_ARGS_MAX_LENGTH_CHARS,
+} from "../constants.js";
 import { createOxlintConfig } from "../oxlint-config.js";
 import type { CleanedDiagnostic, Diagnostic, Framework, OxlintOutput } from "../types.js";
 import { neutralizeDisableDirectives } from "./neutralize-disable-directives.js";
@@ -252,6 +256,93 @@ const resolveDiagnosticCategory = (plugin: string, rule: string): string => {
   return RULE_CATEGORY_MAP[ruleKey] ?? PLUGIN_CATEGORY_MAP[plugin] ?? "Other";
 };
 
+const estimateArgsLength = (args: string[]): number =>
+  args.reduce((total, argument) => total + argument.length + 1, 0);
+
+const batchIncludePaths = (baseArgs: string[], includePaths: string[]): string[][] => {
+  const baseArgsLength = estimateArgsLength(baseArgs);
+  const batches: string[][] = [];
+  let currentBatch: string[] = [];
+  let currentBatchLength = baseArgsLength;
+
+  for (const filePath of includePaths) {
+    const entryLength = filePath.length + 1;
+    if (currentBatch.length > 0 && currentBatchLength + entryLength > SPAWN_ARGS_MAX_LENGTH_CHARS) {
+      batches.push(currentBatch);
+      currentBatch = [];
+      currentBatchLength = baseArgsLength;
+    }
+    currentBatch.push(filePath);
+    currentBatchLength += entryLength;
+  }
+
+  if (currentBatch.length > 0) {
+    batches.push(currentBatch);
+  }
+
+  return batches;
+};
+
+const spawnOxlint = (args: string[], rootDirectory: string): Promise<string> =>
+  new Promise<string>((resolve, reject) => {
+    const child = spawn(process.execPath, args, {
+      cwd: rootDirectory,
+    });
+
+    const stdoutBuffers: Buffer[] = [];
+    const stderrBuffers: Buffer[] = [];
+
+    child.stdout.on("data", (buffer: Buffer) => stdoutBuffers.push(buffer));
+    child.stderr.on("data", (buffer: Buffer) => stderrBuffers.push(buffer));
+
+    child.on("error", (error) => reject(new Error(`Failed to run oxlint: ${error.message}`)));
+    child.on("close", () => {
+      const output = Buffer.concat(stdoutBuffers).toString("utf-8").trim();
+      if (!output) {
+        const stderrOutput = Buffer.concat(stderrBuffers).toString("utf-8").trim();
+        if (stderrOutput) {
+          reject(new Error(`Failed to run oxlint: ${stderrOutput}`));
+          return;
+        }
+      }
+      resolve(output);
+    });
+  });
+
+const parseOxlintOutput = (stdout: string): Diagnostic[] => {
+  if (!stdout) return [];
+
+  let output: OxlintOutput;
+  try {
+    output = JSON.parse(stdout) as OxlintOutput;
+  } catch {
+    throw new Error(
+      `Failed to parse oxlint output: ${stdout.slice(0, ERROR_PREVIEW_LENGTH_CHARS)}`,
+    );
+  }
+
+  return output.diagnostics
+    .filter((diagnostic) => diagnostic.code && JSX_FILE_PATTERN.test(diagnostic.filename))
+    .map((diagnostic) => {
+      const { plugin, rule } = parseRuleCode(diagnostic.code);
+      const primaryLabel = diagnostic.labels[0];
+
+      const cleaned = cleanDiagnosticMessage(diagnostic.message, diagnostic.help, plugin, rule);
+
+      return {
+        filePath: diagnostic.filename,
+        plugin,
+        rule,
+        severity: diagnostic.severity,
+        message: cleaned.message,
+        help: cleaned.help,
+        line: primaryLabel?.span.line ?? 0,
+        column: primaryLabel?.span.column ?? 0,
+        category: resolveDiagnosticCategory(plugin, rule),
+      };
+    });
+};
+
 export const runOxlint = async (
   rootDirectory: string,
   hasTypeScript: boolean,
@@ -272,76 +363,23 @@ export const runOxlint = async (
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 
     const oxlintBinary = resolveOxlintBinary();
-    const args = [oxlintBinary, "-c", configPath, "--format", "json"];
+    const baseArgs = [oxlintBinary, "-c", configPath, "--format", "json"];
 
     if (hasTypeScript) {
-      args.push("--tsconfig", "./tsconfig.json");
+      baseArgs.push("--tsconfig", "./tsconfig.json");
     }
 
-    if (includePaths !== undefined) {
-      args.push(...includePaths);
-    } else {
-      args.push(".");
+    const fileBatches =
+      includePaths !== undefined ? batchIncludePaths(baseArgs, includePaths) : [["."]];
+
+    const allDiagnostics: Diagnostic[] = [];
+    for (const batch of fileBatches) {
+      const batchArgs = [...baseArgs, ...batch];
+      const stdout = await spawnOxlint(batchArgs, rootDirectory);
+      allDiagnostics.push(...parseOxlintOutput(stdout));
     }
 
-    const stdout = await new Promise<string>((resolve, reject) => {
-      const child = spawn(process.execPath, args, {
-        cwd: rootDirectory,
-      });
-
-      const stdoutBuffers: Buffer[] = [];
-      const stderrBuffers: Buffer[] = [];
-
-      child.stdout.on("data", (buffer: Buffer) => stdoutBuffers.push(buffer));
-      child.stderr.on("data", (buffer: Buffer) => stderrBuffers.push(buffer));
-
-      child.on("error", (error) => reject(new Error(`Failed to run oxlint: ${error.message}`)));
-      child.on("close", () => {
-        const output = Buffer.concat(stdoutBuffers).toString("utf-8").trim();
-        if (!output) {
-          const stderrOutput = Buffer.concat(stderrBuffers).toString("utf-8").trim();
-          if (stderrOutput) {
-            reject(new Error(`Failed to run oxlint: ${stderrOutput}`));
-            return;
-          }
-        }
-        resolve(output);
-      });
-    });
-
-    if (!stdout) {
-      return [];
-    }
-
-    let output: OxlintOutput;
-    try {
-      output = JSON.parse(stdout) as OxlintOutput;
-    } catch {
-      throw new Error(
-        `Failed to parse oxlint output: ${stdout.slice(0, ERROR_PREVIEW_LENGTH_CHARS)}`,
-      );
-    }
-
-    return output.diagnostics
-      .filter((diagnostic) => diagnostic.code && JSX_FILE_PATTERN.test(diagnostic.filename))
-      .map((diagnostic) => {
-        const { plugin, rule } = parseRuleCode(diagnostic.code);
-        const primaryLabel = diagnostic.labels[0];
-
-        const cleaned = cleanDiagnosticMessage(diagnostic.message, diagnostic.help, plugin, rule);
-
-        return {
-          filePath: diagnostic.filename,
-          plugin,
-          rule,
-          severity: diagnostic.severity,
-          message: cleaned.message,
-          help: cleaned.help,
-          line: primaryLabel?.span.line ?? 0,
-          column: primaryLabel?.span.column ?? 0,
-          category: resolveDiagnosticCategory(plugin, rule),
-        };
-      });
+    return allDiagnostics;
   } finally {
     restoreDisableDirectives();
     if (fs.existsSync(configPath)) {
