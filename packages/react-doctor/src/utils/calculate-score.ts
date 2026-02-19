@@ -6,6 +6,7 @@ import {
   SCORE_OK_THRESHOLD,
 } from "../constants.js";
 import type { Diagnostic, EstimatedScoreResult, ScoreResult } from "../types.js";
+import { proxyFetch } from "./proxy-fetch.js";
 
 const ERROR_RULE_PENALTY = 1.5;
 const WARNING_RULE_PENALTY = 0.75;
@@ -66,7 +67,7 @@ const estimateScoreLocally = (diagnostics: Diagnostic[]): EstimatedScoreResult =
 
 export const calculateScore = async (diagnostics: Diagnostic[]): Promise<ScoreResult | null> => {
   try {
-    const response = await fetch(SCORE_API_URL, {
+    const response = await proxyFetch(SCORE_API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ diagnostics }),
@@ -84,7 +85,7 @@ export const fetchEstimatedScore = async (
   diagnostics: Diagnostic[],
 ): Promise<EstimatedScoreResult | null> => {
   try {
-    const response = await fetch(ESTIMATE_SCORE_API_URL, {
+    const response = await proxyFetch(ESTIMATE_SCORE_API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ diagnostics }),

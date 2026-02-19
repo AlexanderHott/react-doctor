@@ -26,7 +26,7 @@ export const SHARE_BASE_URL = "https://www.react.doctor/share";
 
 export const OPEN_BASE_URL = "https://www.react.doctor/open";
 
-export const INSTALL_SKILL_URL = "https://www.react.doctor/install-skill";
+export const FETCH_TIMEOUT_MS = 10_000;
 
 export const GIT_LS_FILES_MAX_BUFFER_BYTES = 50 * 1024 * 1024;
 
