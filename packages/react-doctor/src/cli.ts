@@ -15,6 +15,7 @@ import { loadConfig } from "./utils/load-config.js";
 import { logger } from "./utils/logger.js";
 import { clearSelectBanner, prompts, setSelectBanner } from "./utils/prompts.js";
 import { selectProjects } from "./utils/select-projects.js";
+import { maybePromptSkillInstall } from "./utils/skill-prompt.js";
 
 const VERSION = process.env.VERSION ?? "0.0.0";
 
@@ -190,6 +191,7 @@ const program = new Command()
       }
 
       if (!isScoreOnly && !shouldSkipAmiPrompts && !flags.fix) {
+        await maybePromptSkillInstall(shouldSkipAmiPrompts);
         const estimatedScoreResult = flags.offline
           ? null
           : await fetchEstimatedScore(allDiagnostics);
