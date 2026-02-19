@@ -314,7 +314,10 @@ const printSummary = (
   logger.dim(`  Share your results: ${highlighter.info(shareUrl)}`);
 };
 
-export const scan = async (directory: string, inputOptions: ScanOptions = {}): Promise<ScanResult> => {
+export const scan = async (
+  directory: string,
+  inputOptions: ScanOptions = {},
+): Promise<ScanResult> => {
   const startTime = performance.now();
   const projectInfo = discoverProject(directory);
   const userConfig = loadConfig(directory);

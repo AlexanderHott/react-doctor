@@ -54,7 +54,9 @@ const estimateScoreLocally = (diagnostics: Diagnostic[]): EstimatedScoreResult =
   const { errorRuleCount, warningRuleCount } = countUniqueRules(diagnostics);
 
   const currentScore = scoreFromRuleCounts(errorRuleCount, warningRuleCount);
-  const estimatedUnfixedErrorRuleCount = Math.round(errorRuleCount * (1 - ERROR_ESTIMATED_FIX_RATE));
+  const estimatedUnfixedErrorRuleCount = Math.round(
+    errorRuleCount * (1 - ERROR_ESTIMATED_FIX_RATE),
+  );
   const estimatedUnfixedWarningRuleCount = Math.round(
     warningRuleCount * (1 - WARNING_ESTIMATED_FIX_RATE),
   );
