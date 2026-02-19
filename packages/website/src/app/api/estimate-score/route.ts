@@ -8,9 +8,16 @@ const ERROR_ESTIMATED_FIX_RATE = 0.85;
 const WARNING_ESTIMATED_FIX_RATE = 0.8;
 
 interface DiagnosticInput {
+  filePath: string;
   plugin: string;
   rule: string;
   severity: "error" | "warning";
+  message: string;
+  help: string;
+  line: number;
+  column: number;
+  category: string;
+  weight?: number;
 }
 
 const getScoreLabel = (score: number): string => {
@@ -46,9 +53,15 @@ const isValidDiagnostic = (value: unknown): value is DiagnosticInput => {
   if (typeof value !== "object" || value === null) return false;
   const record = value as Record<string, unknown>;
   return (
+    typeof record.filePath === "string" &&
     typeof record.plugin === "string" &&
     typeof record.rule === "string" &&
-    (record.severity === "error" || record.severity === "warning")
+    (record.severity === "error" || record.severity === "warning") &&
+    typeof record.message === "string" &&
+    typeof record.help === "string" &&
+    typeof record.line === "number" &&
+    typeof record.column === "number" &&
+    typeof record.category === "string"
   );
 };
 
@@ -62,6 +75,7 @@ export const OPTIONS = (): Response => new Response(null, { status: 204, headers
 
 export const POST = async (request: Request): Promise<Response> => {
   const body = await request.json().catch(() => null);
+  console.log("[/api/estimate-score]", JSON.stringify(body));
 
   if (!body || !Array.isArray(body.diagnostics)) {
     return Response.json(
@@ -76,7 +90,7 @@ export const POST = async (request: Request): Promise<Response> => {
     return Response.json(
       {
         error:
-          "Each diagnostic must have 'plugin' (string), 'rule' (string), and 'severity' ('error' | 'warning')",
+          "Each diagnostic must have 'filePath', 'plugin', 'rule', 'severity', 'message', 'help', 'line', 'column', and 'category'",
       },
       { status: 400, headers: CORS_HEADERS },
     );

@@ -12,14 +12,7 @@ const WARNING_RULE_PENALTY = 0.75;
 const ERROR_ESTIMATED_FIX_RATE = 0.85;
 const WARNING_ESTIMATED_FIX_RATE = 0.8;
 
-const buildDiagnosticPayload = (
-  diagnostics: Diagnostic[],
-): Array<{ plugin: string; rule: string; severity: string }> =>
-  diagnostics.map((diagnostic) => ({
-    plugin: diagnostic.plugin,
-    rule: diagnostic.rule,
-    severity: diagnostic.severity,
-  }));
+const buildDiagnosticPayload = (diagnostics: Diagnostic[]): Diagnostic[] => diagnostics;
 
 const getScoreLabel = (score: number): string => {
   if (score >= SCORE_GOOD_THRESHOLD) return "Great";
